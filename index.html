@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#240b0c">
+<title>Gasdra</title>
+<style>
+/* VOICE: brincalhão, sem texto, tátil
+   IDEA: um medalhão de bestiário que vira brinquedo sonoro
+   PICTURE: o gasdra enorme, cabeças vivas ao toque
+   COLOUR: vinho escuro, brilho pergaminho, vermelho do aro
+   LAYOUT: medalhão centrado, botão de parar abaixo */
+:root{--bg:#240b0c;--bg2:#3b1213;--glow:#e9cfa9;--red:#d9363a;--cream:#f6ead7}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(120% 80% at 50% 38%,var(--bg2) 0%,var(--bg) 62%);color:var(--cream);
+  overflow:hidden;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  display:grid;grid-template-rows:1fr auto;min-height:100dvh;
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+main{display:grid;place-items:center;position:relative}
+main::before{content:"";position:absolute;width:min(90vw,62vh);aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,rgba(233,207,169,.22),transparent 65%);top:50%;left:50%;transform:translate(-50%,-44%);pointer-events:none}
+.stage{position:relative;width:min(92vw,calc((100dvh - 170px) * .86),520px);aspect-ratio:351/408;touch-action:none;cursor:pointer;
+  filter:drop-shadow(0 18px 30px rgba(0,0,0,.55))}
+.stage img{width:100%;height:100%;display:block;pointer-events:none;-webkit-user-drag:none}
+.body{position:absolute;inset:0;transform-origin:50% 90%}
+.bump{animation:bump .32s cubic-bezier(.3,1.6,.5,1)}
+@keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.035,.97)}100%{transform:scale(1)}}
+.panic .body{animation:shake .09s linear infinite}
+@keyframes shake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-4px,2px) rotate(-1.4deg)}50%{transform:translate(3px,-2px) rotate(1deg)}75%{transform:translate(-2px,-3px) rotate(-.6deg)}100%{transform:translate(4px,1px) rotate(1.3deg)}}
+.head{position:absolute;border-radius:50%;transform:translate(-50%,-50%);aspect-ratio:1}
+.head::after{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid var(--cream);opacity:0;transform:scale(.6)}
+.head.hit::after{animation:ring .5s ease-out}
+@keyframes ring{0%{opacity:.95;transform:scale(.6)}100%{opacity:0;transform:scale(1.6)}}
+.hold{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.hold circle{fill:none;stroke:var(--cream);stroke-width:7;stroke-linecap:round;stroke-dasharray:1106;stroke-dashoffset:1106;
+  transform:rotate(-90deg);transform-origin:175px 231px;opacity:0;transition:opacity .15s}
+.holding .hold circle{opacity:.9;animation:fill .42s linear forwards}
+@keyframes fill{to{stroke-dashoffset:0}}
+.panic .hold circle{opacity:0}
+footer{display:grid;place-items:center;padding-top:8px}
+.stop{width:84px;height:84px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;cursor:pointer;
+  background:radial-gradient(circle at 50% 35%,#ef5a5d,var(--red) 55%,#9c1f22);
+  box-shadow:0 6px 0 #6d1416,0 12px 24px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,255,255,.35);
+  transition:transform .08s,box-shadow .08s,filter .2s,opacity .2s;opacity:.55;filter:saturate(.5)}
+.stop svg{width:30px;height:30px}
+.stop:active{transform:translateY(5px);box-shadow:0 1px 0 #6d1416,0 6px 14px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,255,255,.35)}
+.stop:focus-visible{outline:3px solid var(--cream);outline-offset:5px}
+.playing .stop{opacity:1;filter:none;animation:breathe 1.2s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 6px 0 #6d1416,0 12px 24px rgba(0,0,0,.5),0 0 0 10px rgba(217,54,58,.18),inset 0 2px 0 rgba(255,255,255,.35)}}
+@media (prefers-reduced-motion:reduce){.panic .body,.playing .stop{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="stage" id="stage" aria-label="Gasdra">
+    <div class="body" id="body">
+      <img src="gasdra.webp" alt="" draggable="false">
+      <div class="head" data-i="0" style="left:19.9%;top:19.1%;width:26%"></div>
+      <div class="head" data-i="1" style="left:47.9%;top:10.3%;width:26%"></div>
+      <div class="head" data-i="2" style="left:58.1%;top:52.5%;width:25%"></div>
+    </div>
+    <svg class="hold" viewBox="0 0 351 408" aria-hidden="true"><circle cx="175" cy="231" r="176"/></svg>
+  </div>
+</main>
+<footer>
+  <button class="stop" id="stop" aria-label="Parar">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3" fill="#f6ead7"/></svg>
+  </button>
+</footer>
+<script>
+{
+const B='https://www.myinstants.com/media/sounds/';
+const SRC=[B+'baby-goose-honk.mp3',B+'honk-sound.mp3',B+'canada-goose-honk.mp3'];
+const PANIC=B+'panic-honk.mp3';
+const base={};
+for(const u of [...SRC,PANIC]){const a=new Audio(u);a.preload='auto';base[u]=a}
+const live=new Set();
+const stage=document.getElementById('stage');
+const body=document.getElementById('body');
+const stopBtn=document.getElementById('stop');
+let panics=0;
+const sync=()=>{document.body.classList.toggle('playing',live.size>0);stage.classList.toggle('panic',panics>0)};
+const buzz=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+function play(u,isPanic){
+  const a=base[u].cloneNode();
+  live.add(a);if(isPanic)panics++;
+  const done=()=>{if(!live.has(a))return;live.delete(a);if(isPanic)panics--;sync()};
+  a.addEventListener('ended',done);a.addEventListener('error',done);a._done=done;
+  const p=a.play();if(p&&p.catch)p.catch(done);
+  sync();
+}
+function stopAll(){for(const a of [...live]){try{a.pause();a.currentTime=0}catch(e){}a._done()}panics=0;sync()}
+function bump(){body.classList.remove('bump');void body.offsetWidth;body.classList.add('bump')}
+let timer=null,start=null,fired=false;
+stage.addEventListener('pointerdown',e=>{
+  if(e.button>0)return;
+  start={x:e.clientX,y:e.clientY,head:e.target.closest('.head')};fired=false;
+  stage.classList.add('holding');
+  timer=setTimeout(()=>{fired=true;stage.classList.remove('holding');buzz([30,40,30]);play(PANIC,true)},420);
+});
+const cancel=()=>{clearTimeout(timer);timer=null;stage.classList.remove('holding')};
+stage.addEventListener('pointermove',e=>{if(start&&!fired&&Math.hypot(e.clientX-start.x,e.clientY-start.y)>14){cancel();start=null}});
+stage.addEventListener('pointerup',()=>{
+  if(!start)return;const h=start.head;cancel();start=null;
+  if(fired)return;
+  bump();
+  if(h){play(SRC[+h.dataset.i]);buzz(15);h.classList.remove('hit');void h.offsetWidth;h.classList.add('hit')}
+});
+stage.addEventListener('pointercancel',()=>{cancel();start=null});
+stage.addEventListener('contextmenu',e=>e.preventDefault());
+stopBtn.addEventListener('click',()=>{stopAll();buzz(20)});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+sync();
+}
+</script>
+</body>
+</html>
